@@ -27,4 +27,10 @@ INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
 --TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
-SELECT * FROM ...
+select I.ItemNumber, TRY_CAST(SUM(TRY_CAST((I.PricePerItem * I.QuantityOnHand) AS DECIMAL)) AS DECIMAL) as TotalValue, A.TotalInventoryValue, A.ItemNumber
+FROM @inventory AS I
+FULL OUTER JOIN @accounting as A
+ON I.ItemNumber = A.ItemNumber
+GROUP BY I.ItemNumber, A.TotalInventoryValue, A.ItemNumber
+ORDER BY I.ItemNumber COLLATE Latin1_General_CS_AI;
+
