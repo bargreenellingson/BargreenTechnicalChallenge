@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
-using System.Globalization;
-using System.Text;
 
 namespace Bargreen.Services
 {
@@ -14,7 +12,7 @@ namespace Bargreen.Services
         public decimal TotalValueInAccountingBalance { get; set; }
         /* Added to easily determine both balanced and unbalanced entries
         (saves on doing the comparison later.) */
-        public Boolean inventoryIsBalanced { get; set; } 
+        public Boolean InventoryIsBalanced { get; set; } 
     }
 
     public class InventoryBalance
@@ -129,116 +127,110 @@ namespace Bargreen.Services
         {
             /* We can't do nested loops, as that runs in O(n*m), which is not ideal.  Instead, we create a dictionary
              using the inventory enumerable and run a loop over the accounting enumerable to check against it.*/
-            var lookup = new Dictionary<string, InventoryReconciliationResult>();
-            IEnumerable<InventoryReconciliationResult> result;
-            InventoryReconciliationResult temp; // Should this be kept local to the loop to avoid unpredictiable behavior?
-
-            return await Task.Run(() => {
-                //Only proceed if both lists are populated.
-                if (inventoryBalances.Count() > 0 && accountingBalances.Count() > 0)
+            return await Task.Run(() =>
+            {
+                try
                 {
-                    // If we have entries, iterate over the inventory balances list to create a dictionary. (O(n))
-                    foreach (var item in inventoryBalances)
+                    if (inventoryBalances.Count() > 0 || accountingBalances.Count() > 0)
                     {
-                        if (lookup.TryGetValue(item.ItemNumber, out temp))
+                        if (inventoryBalances.Count() > 0)
                         {
-                            temp.TotalValueOnHandInInventory += item.PricePerItem * item.QuantityOnHand;
-                        }
-                        else
-                        {
-                            lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
+                            if (accountingBalances.Count() > 0)
                             {
-                                ItemNumber = item.ItemNumber,
-                                TotalValueOnHandInInventory = item.PricePerItem * item.QuantityOnHand,
-                                TotalValueInAccountingBalance = 0.0M,
-                                inventoryIsBalanced = false
-                            });
+                                return consolidateAccountingIntoInventory(createLookupDictionaryFromInventory(inventoryBalances), accountingBalances).Values.ToList<InventoryReconciliationResult>();
+                            }
+                            return createLookupDictionaryFromInventory(inventoryBalances).Values.ToList<InventoryReconciliationResult>();
                         }
+                        return createLookupDictionaryFromAccounting(accountingBalances).Values.ToList<InventoryReconciliationResult>();
                     }
+                    return new List<InventoryReconciliationResult>();
+                } catch (Exception e)
+                {
+                    throw e;
+                }
+            });
+        }
 
-                    // while iterating over accounting, add or update entries in the directory. (O(m))
-                    foreach (var item in accountingBalances)
-                    {
-                        // If a match is found, update entry and decide if it is balanced.
-                        if (lookup.TryGetValue(item.ItemNumber, out temp))
-                        {
-                            // First, update TotalValueInAccountingBalance and then set the boolean.
-                            temp.TotalValueInAccountingBalance = item.TotalInventoryValue;
-                            temp.inventoryIsBalanced = temp.TotalValueOnHandInInventory == item.TotalInventoryValue;
-                        }
-                        else
-                        {
-                            // Create an new entry in the directory since there is an entry in accounting that is not in inventory.
-                            lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
-                            {
-                                ItemNumber = item.ItemNumber,
-                                TotalValueOnHandInInventory = 0.0M,
-                                TotalValueInAccountingBalance = item.TotalInventoryValue,
-                                inventoryIsBalanced = false
-                            });
-                        }
-                    }
-                    // return the values of the directory for a run time of O(n+m).
-                    result = lookup.Values.ToList<InventoryReconciliationResult>();
+        private Dictionary<string, InventoryReconciliationResult> createLookupDictionaryFromInventory(IEnumerable<InventoryBalance> inventoryBalances)
+        {
+            var lookup = new Dictionary<string, InventoryReconciliationResult>();
+            InventoryReconciliationResult temp;
+
+            //iterate over the inventory balances list to create a dictionary. (O(n))
+            foreach (var item in inventoryBalances)
+            {
+                if (lookup.TryGetValue(item.ItemNumber, out temp))
+                {
+                    temp.TotalValueOnHandInInventory += item.PricePerItem * item.QuantityOnHand;
                 }
                 else
-                // attempt to return something in the case of an empty list parameter, in case there still results in the other list.
                 {
-                    // If inventory has entries, add them to the results dictionary.
-                    if (inventoryBalances.Count() > 0)
+                    lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
                     {
-                        foreach (var item in inventoryBalances)
-                        {
-                            if (lookup.TryGetValue(item.ItemNumber, out temp))
-                            {
-                                temp.TotalValueOnHandInInventory += item.PricePerItem * item.QuantityOnHand;
-                            }
-                            else
-                            {
-                                lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
-                                {
-                                    ItemNumber = item.ItemNumber,
-                                    TotalValueOnHandInInventory = item.PricePerItem * item.QuantityOnHand,
-                                    TotalValueInAccountingBalance = 0.0M,
-                                    inventoryIsBalanced = false
-                                });
-                            }
-                        }
-                    }
-
-                    // If accounting has entries, add them to the results dictionary.
-                    if (accountingBalances.Count() > 0)
-                    {
-                        // If not empty, iterate over accounting, add entries to the result dictionary. (O(m))
-                        foreach (var item in accountingBalances)
-                        {
-                            // If a match is found, update entry and decide if it is balanced.
-                            if (lookup.TryGetValue(item.ItemNumber, out temp))
-                            {
-                                // First, update TotalValueInAccountingBalance and then set the boolean.
-                                temp.TotalValueInAccountingBalance = item.TotalInventoryValue;
-                                temp.inventoryIsBalanced = temp.TotalValueOnHandInInventory == item.TotalInventoryValue;
-                            }
-                            else
-                            {
-                                // Create an new entry in the directory since there is an entry in accounting that is not in inventory.
-                                lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
-                                {
-                                    ItemNumber = item.ItemNumber,
-                                    TotalValueOnHandInInventory = 0.0M,
-                                    TotalValueInAccountingBalance = item.TotalInventoryValue,
-                                    inventoryIsBalanced = false
-                                });
-                            }
-                        }
-                    }
-
-                    result = lookup.Values.ToList<InventoryReconciliationResult>();
+                        ItemNumber = item.ItemNumber,
+                        TotalValueOnHandInInventory = item.PricePerItem * item.QuantityOnHand,
+                        TotalValueInAccountingBalance = 0.00M,
+                        InventoryIsBalanced = false
+                    });
                 }
+            }
 
-                // We are done, return whatever we have.
-                return result;
-            });
+            return lookup;
+        }
+        private Dictionary<string, InventoryReconciliationResult> createLookupDictionaryFromAccounting(IEnumerable<AccountingBalance> inventoryBalances)
+        {
+            var lookup = new Dictionary<string, InventoryReconciliationResult>();
+            InventoryReconciliationResult temp;
+
+            //iterate over the inventory balances list to create a dictionary. (O(n))
+            foreach (var item in inventoryBalances)
+            {
+                if (lookup.TryGetValue(item.ItemNumber, out temp))
+                {
+                    temp.TotalValueInAccountingBalance += item.TotalInventoryValue;
+                }
+                else
+                {
+                    lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
+                    {
+                        ItemNumber = item.ItemNumber,
+                        TotalValueOnHandInInventory = 0.00M,
+                        TotalValueInAccountingBalance = item.TotalInventoryValue,
+                        InventoryIsBalanced = false
+                    });
+                }
+            }
+
+            return lookup;
+        }
+        private Dictionary<string, InventoryReconciliationResult> consolidateAccountingIntoInventory(Dictionary<string, InventoryReconciliationResult> lookup, IEnumerable<AccountingBalance> accountingBalances)
+        {
+            InventoryReconciliationResult temp;
+
+            // while iterating over accounting, add or update entries in the directory. (O(m))
+            foreach (var item in accountingBalances)
+            {
+                // If a match is found, update entry and decide if it is balanced.
+                if (lookup.TryGetValue(item.ItemNumber, out temp))
+                {
+                    // First, update TotalValueInAccountingBalance and then set the boolean.
+                    temp.TotalValueInAccountingBalance = item.TotalInventoryValue;
+                    temp.InventoryIsBalanced = temp.TotalValueOnHandInInventory == item.TotalInventoryValue;
+                }
+                else
+                {
+                    // Create an new entry in the directory since there is an entry in accounting that is not in inventory.
+                    lookup.Add(item.ItemNumber, new InventoryReconciliationResult()
+                    {
+                        ItemNumber = item.ItemNumber,
+                        TotalValueOnHandInInventory = 0.0M,
+                        TotalValueInAccountingBalance = item.TotalInventoryValue,
+                        InventoryIsBalanced = false
+                    });
+                }
+            }
+
+            return lookup;
         }
     }
 }
