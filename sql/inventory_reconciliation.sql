@@ -1,4 +1,3 @@
---Create a table to hold inventory balances:
 declare @inventory table (
     ItemNumber varchar(50) not null,
     WarehouseLocation varchar(50) not null,
@@ -26,5 +25,14 @@ INSERT INTO @accounting VALUES ('ZZZ99', 1930.62)
 INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
---TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
-SELECT * FROM ...
+SELECT Acc.ItemNumber as AccountingItemNum
+	,Inv.ItemNumber as InventoryItemNum
+	,Inv.QuantityOnHand
+	,Acc.TotalInventoryValue
+	,Acc.TotalInventoryValue - Inv.QuantityOnHand AS Difference
+
+FROM @accounting as Acc, 
+	@inventory as Inv
+
+ORDER BY AccountingItemNum asc, InventoryItemNum asc
+
