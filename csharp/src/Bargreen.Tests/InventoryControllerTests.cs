@@ -1,4 +1,5 @@
 using Bargreen.API.Controllers;
+using Bargreen.Services;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -10,11 +11,13 @@ namespace Bargreen.Tests
 {
     public class InventoryControllerTests
     {
+        private InventoryService InventoryService;
+
         [Fact]
-        public void InventoryController_Can_Return_Inventory_Balances()
+        public async void InventoryController_Can_Return_Inventory_Balances()
         {
-            var controller = new InventoryController();
-            var result = controller.GetInventoryBalances();
+            var controller = new InventoryController(InventoryService);
+            var result = await controller.GetInventoryBalances();
             Assert.NotEmpty(result);
         }
 
@@ -23,11 +26,11 @@ namespace Bargreen.Tests
         {
             var methods = typeof(InventoryController)
                 .GetMethods()
-                .Where(m=>m.DeclaringType==typeof(InventoryController));
+                .Where(m => m.DeclaringType == typeof(InventoryController));
 
             Assert.All(methods, m =>
             {
-                Type attType = typeof(AsyncStateMachineAttribute); 
+                Type attType = typeof(AsyncStateMachineAttribute);
                 var attrib = (AsyncStateMachineAttribute)m.GetCustomAttribute(attType);
                 Assert.NotNull(attrib);
                 Assert.Equal(typeof(Task), m.ReturnType.BaseType);
