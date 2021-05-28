@@ -8,34 +8,39 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bargreen.API.Controllers
 {
-    //TODO-CHALLENGE: Make the methods in this controller follow the async/await pattern
+    //TODO-CHALLENGE: Make the methods in this controller follow the async/await -- DONE
     //TODO-CHALLENGE: Use dotnet core dependency injection to inject the InventoryService
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryController : ControllerBase
+
     {
+        private InventoryService InventoryService;
+        public InventoryController(InventoryService inventoryService)
+        {
+            InventoryService = inventoryService;
+        }
+
+
         [Route("InventoryBalances")]
         [HttpGet]
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        public async Task<IEnumerable<InventoryBalance>> GetInventoryBalances()
         {
-            var inventoryService = new InventoryService();
-            return inventoryService.GetInventoryBalances();
+            return await InventoryService.GetInventoryBalances();
         }
 
         [Route("AccountingBalances")]
         [HttpGet]
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        public async Task<IEnumerable<AccountingBalance>> GetAccountingBalances()
         {
-            var inventoryService = new InventoryService();
-            return inventoryService.GetAccountingBalances();
+            return await InventoryService.GetAccountingBalances();
         }
 
         [Route("InventoryReconciliation")]
         [HttpGet]
-        public IEnumerable<InventoryReconciliationResult> GetReconciliation()
+        public async Task<IEnumerable<InventoryReconciliationResult>> GetReconciliation()
         {
-            var inventoryService = new InventoryService();
-            return InventoryService.ReconcileInventoryToAccounting(inventoryService.GetInventoryBalances(), inventoryService.GetAccountingBalances());
+            return await InventoryService.ReconcileInventoryToAccounting(await InventoryService.GetInventoryBalances(), await InventoryService.GetAccountingBalances());
         }
     }
 }
