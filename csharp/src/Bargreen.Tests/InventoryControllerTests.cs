@@ -1,4 +1,5 @@
 using Bargreen.API.Controllers;
+using Bargreen.Services.Interfaces;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -10,10 +11,17 @@ namespace Bargreen.Tests
 {
     public class InventoryControllerTests
     {
+        private readonly IInventoryService _inventoryService;
+
+        public InventoryControllerTests(IInventoryService inventoryService)
+        {
+            _inventoryService = inventoryService;
+        }
+
         [Fact]
         public void InventoryController_Can_Return_Inventory_Balances()
         {
-            var controller = new InventoryController();
+            var controller = new InventoryController(_inventoryService);
             var result = controller.GetInventoryBalances();
             Assert.NotEmpty(result);
         }

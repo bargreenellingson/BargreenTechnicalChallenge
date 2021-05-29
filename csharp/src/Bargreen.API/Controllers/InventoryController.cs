@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bargreen.Services;
 using Bargreen.Services.Dtos;
+using Bargreen.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,12 +16,19 @@ namespace Bargreen.API.Controllers
     [ApiController]
     public class InventoryController : ControllerBase
     {
+        private readonly IInventoryService _inventoryService;
+
+        public InventoryController(IInventoryService inventoryService)
+        {
+            _inventoryService = inventoryService;
+        }
+
         [Route("InventoryBalances")]
         [HttpGet]
         public IEnumerable<InventoryBalance> GetInventoryBalances()
         {
             var inventoryService = new InventoryService();
-            return inventoryService.GetInventoryBalances();
+            return _inventoryService.GetInventoryBalances();
         }
 
         [Route("AccountingBalances")]
@@ -28,7 +36,7 @@ namespace Bargreen.API.Controllers
         public IEnumerable<AccountingBalance> GetAccountingBalances()
         {
             var inventoryService = new InventoryService();
-            return inventoryService.GetAccountingBalances();
+            return _inventoryService.GetAccountingBalances();
         }
 
         [Route("InventoryReconciliation")]
@@ -36,7 +44,7 @@ namespace Bargreen.API.Controllers
         public IEnumerable<InventoryReconciliationResult> GetReconciliation()
         {
             var inventoryService = new InventoryService();
-            return InventoryService.ReconcileInventoryToAccounting(inventoryService.GetInventoryBalances(), inventoryService.GetAccountingBalances());
+            return _inventoryService.ReconcileInventoryToAccounting(inventoryService.GetInventoryBalances(), inventoryService.GetAccountingBalances());
         }
     }
 }
