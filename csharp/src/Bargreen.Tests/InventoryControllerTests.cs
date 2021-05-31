@@ -12,16 +12,18 @@ namespace Bargreen.Tests
     public class InventoryControllerTests
     {
         private readonly IInventoryService _inventoryService;
+        private readonly IInventoryRepository _inventoryRepository;
 
-        public InventoryControllerTests(IInventoryService inventoryService)
+        public InventoryControllerTests(IInventoryService inventoryService, IInventoryRepository inventoryRepository)
         {
             _inventoryService = inventoryService;
+            _inventoryRepository = inventoryRepository;
         }
 
         [Fact]
         public void InventoryController_Can_Return_Inventory_Balances()
         {
-            var controller = new InventoryController(_inventoryService);
+            var controller = new InventoryController(_inventoryService, _inventoryRepository);
             var result = controller.GetInventoryBalances();
             Assert.NotEmpty(result);
         }

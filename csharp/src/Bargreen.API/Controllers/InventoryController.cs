@@ -17,34 +17,33 @@ namespace Bargreen.API.Controllers
     public class InventoryController : ControllerBase
     {
         private readonly IInventoryService _inventoryService;
+        private readonly IInventoryRepository _inventoryRepository;
 
-        public InventoryController(IInventoryService inventoryService)
+        public InventoryController(IInventoryService inventoryService, IInventoryRepository inventoryRepository)
         {
             _inventoryService = inventoryService;
+            _inventoryRepository = inventoryRepository;
         }
 
         [Route("InventoryBalances")]
         [HttpGet]
         public IEnumerable<InventoryBalance> GetInventoryBalances()
         {
-            var inventoryService = new InventoryService();
-            return _inventoryService.GetInventoryBalances();
+            return _inventoryRepository.GetInventoryBalances();
         }
 
         [Route("AccountingBalances")]
         [HttpGet]
         public IEnumerable<AccountingBalance> GetAccountingBalances()
         {
-            var inventoryService = new InventoryService();
-            return _inventoryService.GetAccountingBalances();
+            return _inventoryRepository.GetAccountingBalances();
         }
 
         [Route("InventoryReconciliation")]
         [HttpGet]
         public IEnumerable<InventoryReconciliationResult> GetReconciliation()
         {
-            var inventoryService = new InventoryService();
-            return _inventoryService.ReconcileInventoryToAccounting(inventoryService.GetInventoryBalances(), inventoryService.GetAccountingBalances());
+            return _inventoryService.ReconcileInventoryToAccounting(_inventoryRepository.GetInventoryBalances(), _inventoryRepository.GetAccountingBalances());
         }
     }
 }

@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bargreen.Services.Interfaces;
+using Bargreen.Infrastructure;
 using Bargreen.Services;
 using Bargreen.Services.Interfaces;
 using Microsoft.AspNetCore.Builder;
@@ -31,6 +33,7 @@ namespace Bargreen.API
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddTransient<IInventoryService, InventoryService>();
+            services.AddSingleton<IInventoryRepository, InventoryRepository>();
 
             services.AddSwaggerGen(c =>
             {
