@@ -1,4 +1,6 @@
 using Bargreen.API.Controllers;
+using Bargreen.Infrastructure;
+using Bargreen.Services;
 using Bargreen.Services.Interfaces;
 using System;
 using System.Linq;
@@ -9,23 +11,14 @@ using Xunit;
 
 namespace Bargreen.Tests
 {
-    public class InventoryControllerTests
+    public class InventoryControllerTests : InventoryTestsBase
     {
-        private readonly IInventoryService _inventoryService;
-        private readonly IInventoryRepository _inventoryRepository;
-
-        public InventoryControllerTests(IInventoryService inventoryService, IInventoryRepository inventoryRepository)
-        {
-            _inventoryService = inventoryService;
-            _inventoryRepository = inventoryRepository;
-        }
-
         [Fact]
-        public void InventoryController_Can_Return_Inventory_Balances()
+        public async void InventoryController_Can_Return_Inventory_Balances()
         {
             var controller = new InventoryController(_inventoryService, _inventoryRepository);
             var result = controller.GetInventoryBalances();
-            Assert.NotEmpty(result);
+            Assert.NotEmpty(await result);
         }
 
         [Fact]
