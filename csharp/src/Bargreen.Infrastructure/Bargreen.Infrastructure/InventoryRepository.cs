@@ -10,9 +10,9 @@ namespace Bargreen.Infrastructure
 {
     public class InventoryRepository : IInventoryRepository
     {
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        public async Task<IEnumerable<InventoryBalance>> GetInventoryBalances()
         {
-            return new List<InventoryBalance>()
+            return await Task.Run(() => new List<InventoryBalance>()
             {
                 new InventoryBalance()
                 {
@@ -56,12 +56,12 @@ namespace Bargreen.Infrastructure
                      QuantityOnHand = 15,
                      WarehouseLocation = "WLA6"
                 }
-            };
+            });
         }
 
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        public async Task<IEnumerable<AccountingBalance>> GetAccountingBalances()
         {
-            return new List<AccountingBalance>()
+            return await Task.Run(() => new List<AccountingBalance>()
             {
                 new AccountingBalance()
                 {
@@ -83,7 +83,7 @@ namespace Bargreen.Infrastructure
                      ItemNumber = "fbr77",
                      TotalInventoryValue = 17.99M
                 }
-            };
+            });
         }
     }
 }

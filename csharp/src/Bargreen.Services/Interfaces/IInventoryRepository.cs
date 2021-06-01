@@ -1,11 +1,12 @@
 ﻿using Bargreen.Services.Dtos;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Bargreen.Services.Interfaces
 {
     public interface IInventoryRepository
     {
-        IEnumerable<AccountingBalance> GetAccountingBalances();
-        IEnumerable<InventoryBalance> GetInventoryBalances();
+        Task<IEnumerable<AccountingBalance>> GetAccountingBalances();
+        Task<IEnumerable<InventoryBalance>> GetInventoryBalances();
     }
 }
