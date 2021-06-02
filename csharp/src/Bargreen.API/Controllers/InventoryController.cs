@@ -5,37 +5,66 @@ using System.Threading.Tasks;
 using Bargreen.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Bargreen.Services.Interfaces;
 
 namespace Bargreen.API.Controllers
 {
-    //TODO-CHALLENGE: Make the methods in this controller follow the async/await pattern
-    //TODO-CHALLENGE: Use dotnet core dependency injection to inject the InventoryService
+    //CHALLENGE: Make the methods in this controller follow the async/await pattern
+    //CHALLENGE: Use dotnet core dependency injection to inject the InventoryService
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryController : ControllerBase
     {
+        IInventoryService invenService;
+
+        public InventoryController(IInventoryService isvc)
+        {
+            invenService = isvc;
+        }
+
         [Route("InventoryBalances")]
         [HttpGet]
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        public async Task<IEnumerable<InventoryBalance>> GetInventoryBalances()
         {
-            var inventoryService = new InventoryService();
-            return inventoryService.GetInventoryBalances();
+            //var inventoryService = new InventoryService();
+            //return inventoryService.GetInventoryBalances();
+            return await Task.Run< IEnumerable < InventoryBalance >>(()=> {
+                return invenService.GetInventoryBalances();
+                });
         }
 
         [Route("AccountingBalances")]
         [HttpGet]
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        public async Task<IEnumerable<AccountingBalance>> GetAccountingBalances()
         {
-            var inventoryService = new InventoryService();
-            return inventoryService.GetAccountingBalances();
+            //var inventoryService = new InventoryService();
+            //return inventoryService.GetAccountingBalances();
+            return await Task.Run<IEnumerable<AccountingBalance>>(() =>
+            {
+                return invenService.GetAccountingBalances();
+            });
         }
 
         [Route("InventoryReconciliation")]
         [HttpGet]
-        public IEnumerable<InventoryReconciliationResult> GetReconciliation()
+        public async Task<IEnumerable<InventoryReconciliationResult>> GetReconciliation()
         {
-            var inventoryService = new InventoryService();
-            return InventoryService.ReconcileInventoryToAccounting(inventoryService.GetInventoryBalances(), inventoryService.GetAccountingBalances());
+            //var inventoryService = new InventoryService();
+            //return InventoryService.ReconcileInventoryToAccounting(inventoryService.GetInventoryBalances(), inventoryService.GetAccountingBalances());
+            IEnumerable<InventoryBalance> invenBalance = await Task.Run<IEnumerable<InventoryBalance>>(() =>
+            {
+                return invenService.GetInventoryBalances();
+            });
+
+            IEnumerable<AccountingBalance> acctBalance = await Task.Run<IEnumerable<AccountingBalance>>(() =>
+                {
+                    return invenService.GetAccountingBalances();
+                });
+
+                return await Task.Run<IEnumerable<InventoryReconciliationResult>>(() =>
+            {
+                return invenService.ReconcileInventoryToAccounting(invenBalance, acctBalance);
+            });
         }
     }
 }

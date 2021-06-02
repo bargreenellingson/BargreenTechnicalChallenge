@@ -24,7 +24,14 @@ INSERT INTO @inventory VALUES ('xxddM', 'WLA6', 15, 747.47)
 INSERT INTO @accounting VALUES ('ABC123', 3435)
 INSERT INTO @accounting VALUES ('ZZZ99', 1930.62)
 INSERT INTO @accounting VALUES ('xxccM', 7602.75)
-INSERT INTO @accounting VALUES ('fbr77', 17.99)
+INSERT INTO @accounting VALUES ('fbr77', 17.99);
 
---TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
-SELECT * FROM ...
+
+--CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
+With Inven AS (
+SELECT i.ItemNumber, sum(i.PricePerItem*i.QuantityOnHand*1.0) TotalInven
+FROM @inventory i
+GROUP BY i.ItemNumber)
+SELECT * FROM Inven FULL OUTER JOIN @accounting A ON Inven.ItemNumber = A.ItemNumber
+WHERE Inven.TotalInven <> A.TotalInventoryValue
+	OR Inven.ItemNumber IS NULL OR A.ItemNumber IS NULL

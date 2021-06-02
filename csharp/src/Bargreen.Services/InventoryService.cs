@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
+using Bargreen.Services.Interfaces;
+using System.Linq;
 
-namespace Bargreen.Services
+namespace Bargreen.Services 
 {
     public class InventoryReconciliationResult
     {
@@ -26,12 +29,14 @@ namespace Bargreen.Services
     }
 
 
-    public class InventoryService
+    public class InventoryService : IInventoryService
     {
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        public async Task<IEnumerable<InventoryBalance>> GetInventoryBalances()
         {
-            return new List<InventoryBalance>()
-            {
+            List<InventoryBalance> bal = await Task.Run<List<InventoryBalance>>(() =>
+           {
+               return new List<InventoryBalance>
+           {
                 new InventoryBalance()
                 {
                      ItemNumber = "ABC123",
@@ -74,12 +79,16 @@ namespace Bargreen.Services
                      QuantityOnHand = 15,
                      WarehouseLocation = "WLA6"
                 }
-            };
+           };
+           });
+                return bal;
         }
 
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        public async Task<IEnumerable<AccountingBalance>> GetAccountingBalances()
         {
-            return new List<AccountingBalance>()
+            return await Task.Run<IEnumerable<AccountingBalance>>(() =>
+            {
+                return new List<AccountingBalance>
             {
                 new AccountingBalance()
                 {
@@ -102,12 +111,77 @@ namespace Bargreen.Services
                      TotalInventoryValue = 17.99M
                 }
             };
+            });
         }
 
-        public static IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
+         async  Task<IEnumerable<InventoryReconciliationResult>> IInventoryService.ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
-            //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+            return await ReconcileInventoryToAccounting(inventoryBalances, accountingBalances);
+        }
+
+
+         async static Task<IEnumerable<InventoryReconciliationResult>> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
+        {
+            //CHALLENGE: Compare inventory balances to accounting balances and find differences
+            return await Task.Run<IEnumerable<InventoryReconciliationResult>>(() =>
+            {
+            List<InventoryReconciliationResult> differences = new List<InventoryReconciliationResult>();
+
+                //check for accounts without matching inventories
+                foreach (AccountingBalance acct in accountingBalances)
+                {
+                    var matchCount = (from a in inventoryBalances where acct.ItemNumber == a.ItemNumber select a).Count();
+                    if (matchCount==0)
+                    {
+                        differences.Add(new InventoryReconciliationResult
+                        {
+                            ItemNumber = acct.ItemNumber,
+                            TotalValueOnHandInInventory = 0,
+                            TotalValueInAccountingBalance = acct.TotalInventoryValue
+                        });
+                    }
+                }
+
+                //batch up items by itemNumber
+                List<InventoryBalance> invenSummary = new List<InventoryBalance>();
+                foreach (string itemNumber in (inventoryBalances.Select(i=>i.ItemNumber).Distinct(StringComparer.CurrentCultureIgnoreCase)))
+                {
+                    invenSummary.Add(new InventoryBalance
+                    {
+                        ItemNumber = itemNumber,
+                        QuantityOnHand = (from i in inventoryBalances where String.Equals(i.ItemNumber ,itemNumber, StringComparison.CurrentCultureIgnoreCase) select i.QuantityOnHand).Sum(),
+                        PricePerItem = (from i in inventoryBalances where String.Equals(i.ItemNumber, itemNumber, StringComparison.CurrentCultureIgnoreCase) select i.PricePerItem).First()
+                    }) ;
+                }
+
+                //get inventory listings where balance doesn't match accounts table,
+                //or item is missing from accounts table
+                foreach (InventoryBalance inventoryItem in invenSummary)
+                {
+                AccountingBalance accountingItem = accountingBalances.FirstOrDefault(bal => bal.ItemNumber == inventoryItem.ItemNumber);
+                    decimal valueInInventory = inventoryItem.QuantityOnHand * inventoryItem.PricePerItem;
+                    if (accountingItem == null)
+                    {
+                        differences.Add(new InventoryReconciliationResult
+                        {
+                            ItemNumber = inventoryItem.ItemNumber,
+                            TotalValueOnHandInInventory = valueInInventory,
+                            TotalValueInAccountingBalance = 0
+                        });
+                    }
+                    else if (valueInInventory != accountingItem.TotalInventoryValue)
+                    {
+                        differences.Add(new InventoryReconciliationResult
+                        {
+                            ItemNumber = inventoryItem.ItemNumber,
+                            TotalValueOnHandInInventory = valueInInventory,
+                            TotalValueInAccountingBalance = accountingItem.TotalInventoryValue
+                        });
+                    }
+                }
+
+                return differences;
+            });
         }
     }
 }

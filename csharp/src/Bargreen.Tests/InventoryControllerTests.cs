@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Xunit;
 
+using Bargreen.Services.Interfaces;
+using Bargreen.Services;
+
 namespace Bargreen.Tests
 {
     public class InventoryControllerTests
@@ -13,9 +16,14 @@ namespace Bargreen.Tests
         [Fact]
         public void InventoryController_Can_Return_Inventory_Balances()
         {
-            var controller = new InventoryController();
-            var result = controller.GetInventoryBalances();
-            Assert.NotEmpty(result);
+            IInventoryService svc = new InventoryService();
+            //var controller = new InventoryController();
+            var controller = new InventoryController(svc);
+            Task.Run(async () =>
+            {
+                var result = await controller.GetInventoryBalances();
+                Assert.NotEmpty(result);
+            });
         }
 
         [Fact]
