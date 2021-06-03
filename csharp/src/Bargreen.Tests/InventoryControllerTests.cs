@@ -1,5 +1,8 @@
 using Bargreen.API.Controllers;
+using Bargreen.Services;
+using Moq;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -10,12 +13,18 @@ namespace Bargreen.Tests
 {
     public class InventoryControllerTests
     {
+        //CHANGE added DI and mocked the depenedency 
         [Fact]
-        public void InventoryController_Can_Return_Inventory_Balances()
+        public async Task InventoryController_Can_Return_Inventory_Balances()
         {
-            var controller = new InventoryController();
-            var result = controller.GetInventoryBalances();
-            Assert.NotEmpty(result);
+            var inventoryService = new Mock<IInventoryService>();
+            var data = new List<InventoryBalance>();
+            inventoryService
+                .Setup(i => i.GetInventoryBalancesAsync())
+                .ReturnsAsync(data);
+            var controller = new InventoryController(inventoryService.Object);
+            var result = await controller.GetInventoryBalances();
+            Assert.Same(data, result);
         }
 
         [Fact]
@@ -27,6 +36,7 @@ namespace Bargreen.Tests
 
             Assert.All(methods, m =>
             {
+                //TODO only detects async, not if returns Task
                 Type attType = typeof(AsyncStateMachineAttribute); 
                 var attrib = (AsyncStateMachineAttribute)m.GetCustomAttribute(attType);
                 Assert.NotNull(attrib);

@@ -3,13 +3,13 @@ declare @inventory table (
     ItemNumber varchar(50) not null,
     WarehouseLocation varchar(50) not null,
     QuantityOnHand int not null,
-    PricePerItem decimal not null
+    PricePerItem decimal(18, 2) not null
 )
 
 --Create a table to hold accounting balances: 
 declare @accounting table (
     ItemNumber varchar(50) not null,
-    TotalInventoryValue decimal not null
+    TotalInventoryValue decimal(18, 2) not null
 )
 
 --Mock up some inventory balances
@@ -27,4 +27,9 @@ INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
 --TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
-SELECT * FROM ...
+
+SELECT CASE WHEN i.ItemNumber is NULL THEN a.ItemNumber ELSE i.ItemNumber END AS ItemNumber, SUM(i.QuantityOnHand * i.PricePerItem) as inventory_price, MIN(a.TotalInventoryValue) as accounting_price, CASE WHEN SUM(i.QuantityOnHand * i.PricePerItem) = MIN(a.TotalInventoryValue) THEN 1 ELSE 0 END AS AreEqual
+FROM @inventory as i
+FULL OUTER JOIN @accounting as a ON i.ItemNumber = a.ItemNumber
+GROUP BY i.ItemNumber, a.ItemNumber
+
