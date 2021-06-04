@@ -112,7 +112,7 @@ namespace Bargreen.Services
             });
         }
 
-        public async static Task<IEnumerable<InventoryReconciliationResult>> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
+        public async Task<IEnumerable<InventoryReconciliationResult>> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
             //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
 
