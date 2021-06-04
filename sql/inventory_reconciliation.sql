@@ -25,14 +25,12 @@ INSERT INTO @accounting VALUES ('ZZZ99', 1930.62)
 INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
-SELECT Acc.ItemNumber as AccountingItemNum
-	,Inv.ItemNumber as InventoryItemNum
+SELECT 	Inv.ItemNumber as InventoryItemNum
+	,Acc.ItemNumber as AccountingItemNum
 	,Inv.QuantityOnHand
-	,Acc.TotalInventoryValue
-	,Acc.TotalInventoryValue - Inv.QuantityOnHand AS Difference
-
-FROM @accounting as Acc, 
-	@inventory as Inv
-
-ORDER BY AccountingItemNum asc, InventoryItemNum asc
-
+	,Acc.TotalInventoryValue as TotalAccountingInventoryValue
+	,Acc.TotalInventoryValue - Inv.QuantityOnHand as Difference
+	
+FROM @accounting as Acc FULL OUTER JOIN @inventory as Inv on Acc.ItemNumber = Inv.ItemNumber 
+GROUP BY Inv.ItemNumber,Acc.TotalInventoryValue, Acc.ItemNumber, Inv.QuantityOnHand
+ORDER BY  InventoryItemNum asc
