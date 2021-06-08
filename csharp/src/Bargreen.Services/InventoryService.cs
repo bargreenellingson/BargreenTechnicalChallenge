@@ -25,12 +25,13 @@ namespace Bargreen.Services
         public decimal TotalInventoryValue { get; set; }
     }
 
-
-    public class InventoryService
+    public class InventoryBalances                                          //this class creates and populates a list of InventoryBalance class
     {
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        private List<InventoryBalance> inventoryBalanceList;
+
+        public InventoryBalances()
         {
-            return new List<InventoryBalance>()
+            inventoryBalanceList = new List<InventoryBalance>()
             {
                 new InventoryBalance()
                 {
@@ -77,9 +78,35 @@ namespace Bargreen.Services
             };
         }
 
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        //This function exposes the populated List of InventoryBalance
+        public List<InventoryBalance> getInventoryBalanceList()
         {
-            return new List<AccountingBalance>()
+            return this.inventoryBalanceList;
+        }
+
+        //This function gets the total price of all items in the inventory per item number
+        public int getTotalPerItem(string itemNumber)
+        {
+            decimal total = 0.00M;
+            foreach (InventoryBalance item in this.inventoryBalanceList)
+            {
+                if (item.ItemNumber == itemNumber)
+                {
+                    decimal product = item.PricePerItem * item.QuantityOnHand;
+                    total += product;
+                }
+            }
+            return total;
+        }
+    }
+
+    public class AccountingBalances
+    {
+        private List<AccountingBalance> accountingBalanceList;
+
+        public AccountingBalances()
+        {
+            this.accountingBalanceList = new List<AccountingBalance>()
             {
                 new AccountingBalance()
                 {
@@ -104,10 +131,55 @@ namespace Bargreen.Services
             };
         }
 
+        //This function exposes the populated List of AccountingBalance
+        public List<AccountingBalance> getAccountingBalanceList()
+        {
+            return this.accountingBalanceList;
+        }
+    }
+
+    public class InventoryService
+    {
+        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        {
+            return InventoryBalances.getInventoryBalanceList();
+        }
+
+        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        {
+            return AccountingBalances.getAccountingBalanceList();
+        }
+
         public static IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
             //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+            // throw new NotImplementedException();
+
+            try
+            {
+                AccountingBalances accounting = new AccountingBalances();
+                InventoryBalances inventory = new InventoryBalances();
+
+                List<InventoryReconciliationResult> resultList = new List<InventoryReconciliationResult>();
+                List<AccountingBalance> accountingBalancesList = accounting.getAccountingBalanceList();
+                List<InventoryBalance> inventoryBalancesList = inventory.getInventoryBalanceList();
+
+                foreach (AccountingBalance accountingBalanceItem in accountingBalancesList)
+                {
+                    InventoryReconciliationResult result = new InventoryReconciliationResult();
+                    result.ItemNumber = accountingBalanceItem.ItemNumber;
+                    result.TotalValueInAccountingBalance = accountingBalanceItem.TotalInventoryValue;
+                    result.TotalValueOnHandInInventory = inventory.getTotalPerItem();
+                    resultList.Add(result);
+                }
+
+                return resultList;
+            }
+            catch (System.Exception)
+            {
+                throw System.Exception;
+            }
+
         }
     }
 }

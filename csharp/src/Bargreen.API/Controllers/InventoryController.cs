@@ -10,6 +10,15 @@ namespace Bargreen.API.Controllers
 {
     //TODO-CHALLENGE: Make the methods in this controller follow the async/await pattern
     //TODO-CHALLENGE: Use dotnet core dependency injection to inject the InventoryService
+
+
+    // Note: Async/Await pattern is totally new to me.
+    // I wanna try and do it but unfortunately I cannot test or run it because the computer that I'm using is a slow Macbook and
+    // Visual Studio.Net doesnt work, and for this reason, I decided not to try async/await pattern.
+    // so I only tried my best to code whatever to the very best of my knowledge without testing and debug my codes mentally...
+    // Thank you.
+
+
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryController : ControllerBase
