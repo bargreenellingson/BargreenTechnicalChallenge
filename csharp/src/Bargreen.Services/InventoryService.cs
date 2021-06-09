@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Bargreen.Services
 {
@@ -26,9 +27,16 @@ namespace Bargreen.Services
     }
 
 
-    public class InventoryService
+    public interface InventoryServiceInterface
     {
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        Task<IEnumerable<InventoryBalance>> GetInventoryBalances();
+
+        Task<IEnumerable<AccountingBalance>> GetAccountingBalances();
+    }
+
+    public class InventoryService : InventoryServiceInterface
+    {
+        public async Task<IEnumerable<InventoryBalance>> GetInventoryBalances()
         {
             return new List<InventoryBalance>()
             {
@@ -77,7 +85,7 @@ namespace Bargreen.Services
             };
         }
 
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        public async Task<IEnumerable<AccountingBalance>> GetAccountingBalances()
         {
             return new List<AccountingBalance>()
             {
@@ -106,8 +114,35 @@ namespace Bargreen.Services
 
         public static IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
-            //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+            // assumptions: item numbers are case-insensitive; accounting balance list does not contain duplicate item numbers
+
+            // get reconciliation result for all item numbers in accounting balance list
+            // note: calling Sum() on an empty list will return 0
+            var acc = accountingBalances.Select(a => new InventoryReconciliationResult
+            {
+                ItemNumber = a.ItemNumber.ToUpper(),
+                TotalValueInAccountingBalance = a.TotalInventoryValue,
+                TotalValueOnHandInInventory = inventoryBalances
+                    .Where(i => string.Equals(i.ItemNumber, a.ItemNumber, StringComparison.OrdinalIgnoreCase))
+                    .Select(n => n.PricePerItem * n.QuantityOnHand)
+                    .Sum()
+            });
+
+            // get item numbers we have already added to the list
+            var itemNumbersInList = acc.Select(a => a.ItemNumber);
+
+            // get reconciliation result for item numbers in inventory balance list that have not already been processed
+            var inv = inventoryBalances
+                .Where(i => !itemNumbersInList.Contains(i.ItemNumber.ToUpper()))
+                .GroupBy(num => num.ItemNumber.ToUpper(), balance => balance, (num, balances) => new InventoryReconciliationResult
+            {
+                ItemNumber = num,
+                TotalValueInAccountingBalance = 0,
+                TotalValueOnHandInInventory = balances.Select(n => n.PricePerItem * n.QuantityOnHand).Sum()
+            });
+
+            // concatenate the two lists
+            return acc.Concat(inv);
         }
     }
 }
