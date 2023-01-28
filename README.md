@@ -2,7 +2,7 @@
 
 The tasks described below are meant to gauge your experience and expertise in scenarios you may actually encounter at Bargreen. 
 
-You should begin by forking this repository.  When you've completed as much as possible, open a pull request in the original repo so we can review your changes. In addition to leaving comments in your code, feel free to leave comments in your PR about how you approached the problem, how you followed SOLID principles, or other useful context.
+You should begin by cloning this repository.  When you've completed as much as possible, send us an email and we'll schedule a time to review your changes. The goal is to show us how much you know, so be prepared to talk through how you approached a problem, why you did it that way, what tools you might have used with more time, or anything else that shows your best side. 
 
 #### Context
 This solution models a theoretical world where items are stored in a warehouse, and there is an accounting system that keeps track of the current value of all items in inventory. 
@@ -10,7 +10,7 @@ Unfortunately, the system that tracks warehouse quantities by location is separa
 The **InventoryService** class contains two classes that model the primary domain objects of these 2 systems. 
 
 
-## Please complete the following tasks to the best of your ability:
+## Please complete some of the following tasks to the best of your ability. If you are pressed for time and can't spend more than a couple hours on this, choose the items that highlight your deepest skillset:
 
 #### In the Bargreen.sln solution in the csharp folder:
   - Update the **InventoryController** to run asynchronously following the async/await pattern
