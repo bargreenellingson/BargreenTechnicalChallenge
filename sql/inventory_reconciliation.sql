@@ -27,4 +27,9 @@ INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
 --TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
+
+
+-- So to reconcile matches and differences between inventory and accounting tables we can write a query that selects the data from one table, 
+-- stores it in a variable and compare it with the other table, then perform an update statement if there's a mismatch. We can also add SQL triggers
+-- using transactions that updates the accounting balance everytime there's an update/insert happens on inventory balance.
 SELECT * FROM ...
