@@ -28,8 +28,24 @@ INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
 --TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
 
+-- Updates matching Item Numbers
+UPDATE @accounting
+SET TotalInventoryValue = (SELECT SUM(PricePerItem * QuantityOnHand)
+                            FROM @inventory
+                            WHERE @accounting.ItemNumber = @inventory.ItemNumber)
 
--- So to reconcile matches and differences between inventory and accounting tables we can write a query that selects the data from one table, 
--- stores it in a variable and compare it with the other table, then perform an update statement if there's a mismatch. We can also add SQL triggers
--- using transactions that updates the accounting balance everytime there's an update/insert happens on inventory balance.
-SELECT * FROM ...
+-- Adds missing item numbers to accounting
+INSERT INTO @accounting
+SELECT ItemNumber, SUM(PricePerItem * QuantityOnhand)
+FROM @inventory inv
+LEFT JOIN @accounting acc ON acc.ItemNumber = inv.ItemNumber
+WHERE acc.ItemNumber IS NULL
+Group By ItemNumber
+
+-- Delete account balances not existing in inventory balances.
+DELETE FROM @accounting
+WHERE ItemNumber IN ( SELECT ItemNumber
+                        FROM @accounting as acc
+                        LEFT JOIN @inventory as inv
+                        ON acc.ItemNumber = inv.ItemNumebr
+                        WHERE inv.ItemNumber IS NULL)

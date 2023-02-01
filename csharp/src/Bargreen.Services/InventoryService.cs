@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace Bargreen.Services
 {
     public class InventoryReconciliationResult
     {
         public string ItemNumber { get; set; }
-        public decimal TotalValueOnHandInInventory { get; set; }
-        public decimal TotalValueInAccountingBalance { get; set; }
+        public decimal? TotalValueOnHandInInventory { get; set; }
+        public decimal? TotalValueInAccountingBalance { get; set; }
     }
 
     public class InventoryBalance
@@ -25,13 +27,14 @@ namespace Bargreen.Services
         public decimal TotalInventoryValue { get; set; }
     }
 
-
-    public class InventoryService
+    // By creating an interface and implementing it here, we can perform dependency injection and avoid tightly
+    // coupled classes.
+    public class InventoryService : IInventoryService
     {
         public IEnumerable<InventoryBalance> GetInventoryBalances()
         {
-            return new List<InventoryBalance>()
-            {
+            // The code here is naturally synchronous, so we're forced to keep it that way.
+            return new List<InventoryBalance>() {
                 new InventoryBalance()
                 {
                      ItemNumber = "ABC123",
@@ -73,12 +76,12 @@ namespace Bargreen.Services
                      PricePerItem = 747.47M,
                      QuantityOnHand = 15,
                      WarehouseLocation = "WLA6"
-                }
-            };
+                }};
         }
 
         public IEnumerable<AccountingBalance> GetAccountingBalances()
         {
+            // The code here is naturally synchronous, so we're forced to keep it that way.
             return new List<AccountingBalance>()
             {
                 new AccountingBalance()
@@ -104,10 +107,63 @@ namespace Bargreen.Services
             };
         }
 
-        public static IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
+        public IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
             //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+
+            // Here we're generating the actual total inventory value for items in our inventory
+            // With grouping by item number, we're ensuring that items are calculated for in all regions.
+            List<AccountingBalance> totalValueOnHand = inventoryBalances.GroupBy(x => x.ItemNumber)
+                                                               .Select(invBalance => new AccountingBalance
+                                                               {
+                                                                   ItemNumber = invBalance.First().ItemNumber,
+                                                                   TotalInventoryValue = invBalance.Sum(ib => ib.PricePerItem * ib.QuantityOnHand)
+                                                               }).ToList();
+
+
+            List<InventoryReconciliationResult> inventoryReconciliationResults = new List<InventoryReconciliationResult>();
+
+            // We will use this list to reconcile item numbers existing in Inventory but not in Accounting balance data set later.
+            List<AccountingBalance> accountingBalancesList = accountingBalances.ToList();
+            List<string> missingItemNumbersFromAccountingBalances = totalValueOnHand.Where(ac => !accountingBalancesList.Exists(ab => ab.ItemNumber == ac.ItemNumber)).Select(a => a.ItemNumber).ToList();
+
+            // Here we will generate our result list by doing comparisons and checking if list contains item.
+            foreach (AccountingBalance ab in accountingBalances)
+            {
+                if (totalValueOnHand.Exists(accBal => accBal.ItemNumber == ab.ItemNumber))
+                {
+                    inventoryReconciliationResults.Add(new InventoryReconciliationResult()
+                    {
+                        ItemNumber = ab.ItemNumber,
+                        TotalValueInAccountingBalance = ab.TotalInventoryValue,
+                        TotalValueOnHandInInventory = totalValueOnHand.First(accBal => accBal.ItemNumber == ab.ItemNumber).TotalInventoryValue
+                    });
+                } 
+                // This else statement will create records for account balances with item numbers that don't exist
+                // in our inventory data set.
+                else
+                {
+                    inventoryReconciliationResults.Add(new InventoryReconciliationResult()
+                    {
+                        ItemNumber = ab.ItemNumber,
+                        TotalValueInAccountingBalance = ab.TotalInventoryValue,
+                        TotalValueOnHandInInventory = null
+                    });
+                }
+            }
+
+            // finally for item numbers not in accounting balance data set, create a record as well
+            foreach (string itemNumber in missingItemNumbersFromAccountingBalances)
+            {
+                inventoryReconciliationResults.Add(new InventoryReconciliationResult()
+                {
+                    ItemNumber = itemNumber,
+                    TotalValueInAccountingBalance = null,
+                    TotalValueOnHandInInventory = totalValueOnHand.First(ac => ac.ItemNumber == itemNumber).TotalInventoryValue
+                });
+            }
+
+            return inventoryReconciliationResults;
         }
     }
 }
