@@ -35,7 +35,8 @@ namespace Bargreen.API
             });
 
             // Here we're specifying the implementation we want to use for our Inventory Service.
-            services.AddScoped<IInventoryService, InventoryService>();
+            // Singleton since we're using not changing instance, more memory efficient.
+            services.AddSingleton<IInventoryService, InventoryService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
