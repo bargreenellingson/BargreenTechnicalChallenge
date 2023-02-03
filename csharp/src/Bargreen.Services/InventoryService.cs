@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace Bargreen.Services
 {
@@ -26,7 +27,7 @@ namespace Bargreen.Services
     }
 
 
-    public class InventoryService
+    public class InventoryService : IInventoryService
     {
         public IEnumerable<InventoryBalance> GetInventoryBalances()
         {
@@ -41,7 +42,7 @@ namespace Bargreen.Services
                 },
                 new InventoryBalance()
                 {
-                     ItemNumber = "ABC123",
+                     ItemNumber = "AC123",
                      PricePerItem = 7.5M,
                      QuantityOnHand = 146,
                      WarehouseLocation = "WLA2"
@@ -104,10 +105,75 @@ namespace Bargreen.Services
             };
         }
 
-        public static IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
+        public IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
             //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+
+            //  First we are creating a list to get for each item its total value in hand by multiplying PricePerItem and QuantityOnHand
+            List<AccountingBalance> lstInventoryBalance = new List<AccountingBalance>();
+
+            foreach(InventoryBalance invnBalance in inventoryBalances)
+            {
+                lstInventoryBalance.Add(new AccountingBalance()
+                {
+                    ItemNumber = invnBalance.ItemNumber,
+                    TotalInventoryValue = invnBalance.PricePerItem * invnBalance.QuantityOnHand
+                });
+
+            }
+
+            // Create a new lst that will hold the final result of all entries with 
+            List<InventoryReconciliationResult> lstInventoryReconciliationResult = new List<InventoryReconciliationResult>();
+
+            //For each item in accountingBalances we will find that if there is a matching entry in new created list in previous step and there value is different 
+            //then we will add that entry to list
+            //Else we will add  the entry with value 0 as TotalValueOnHandInInventory as this current item is missing in InventoryBalance
+            foreach(AccountingBalance acctBalance in accountingBalances)
+            {
+                var item = lstInventoryBalance.FirstOrDefault(invBal=> invBal.ItemNumber == acctBalance.ItemNumber); 
+                if(item != null)
+                {
+                    if(acctBalance.TotalInventoryValue != item.TotalInventoryValue)
+                    {
+                    lstInventoryReconciliationResult.Add(new InventoryReconciliationResult()
+                    {
+                        ItemNumber = item.ItemNumber,
+                        TotalValueOnHandInInventory = item.TotalInventoryValue,
+                        TotalValueInAccountingBalance = acctBalance.TotalInventoryValue
+                    });
+                    }
+                } 
+                else 
+                {
+                    lstInventoryReconciliationResult.Add(new InventoryReconciliationResult()
+                    {
+                        ItemNumber = acctBalance.ItemNumber,
+                        TotalValueOnHandInInventory = 0.0M,
+                        TotalValueInAccountingBalance = acctBalance.TotalInventoryValue
+                    });
+
+                }
+
+            }
+
+            // Now agin we will check for all items of InventoryBalance that are not in resultant lsit and add them in final list.
+            foreach(InventoryBalance invBalance in inventoryBalances)
+            {
+                var item = lstInventoryReconciliationResult.FirstOrDefault(invBal=> invBal.ItemNumber == invBalance.ItemNumber); 
+                if(item == null)
+                {
+                    lstInventoryReconciliationResult.Add(new InventoryReconciliationResult()
+                    {
+                        ItemNumber = invBalance.ItemNumber,
+                        TotalValueOnHandInInventory = lstInventoryBalance.First(acct => acct.ItemNumber == invBalance.ItemNumber).TotalInventoryValue,
+                        TotalValueInAccountingBalance = 0.0M
+                    });
+                } 
+                
+
+            }
+             return lstInventoryReconciliationResult;
+
         }
     }
 }
