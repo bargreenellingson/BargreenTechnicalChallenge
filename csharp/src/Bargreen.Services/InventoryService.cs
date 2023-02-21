@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Bargreen.Services
 {
@@ -9,6 +11,8 @@ namespace Bargreen.Services
         public string ItemNumber { get; set; }
         public decimal TotalValueOnHandInInventory { get; set; }
         public decimal TotalValueInAccountingBalance { get; set; }
+        
+        public decimal InventoryAccountingDifference { get; set; }
     }
 
     public class InventoryBalance
@@ -28,9 +32,10 @@ namespace Bargreen.Services
 
     public class InventoryService
     {
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        public async Task<IEnumerable<InventoryBalance>> GetInventoryBalancesAsync()
         {
-            return new List<InventoryBalance>()
+            //An Async Database call would be here, awaited, then res would be returned
+            var res  = await Task.Run(() =>new List<InventoryBalance>()
             {
                 new InventoryBalance()
                 {
@@ -74,12 +79,15 @@ namespace Bargreen.Services
                      QuantityOnHand = 15,
                      WarehouseLocation = "WLA6"
                 }
-            };
+            });
+
+            return res;
         }
 
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        public async Task<IEnumerable<AccountingBalance>> GetAccountingBalancesAsync()
         {
-            return new List<AccountingBalance>()
+            //An Async Database call would be here, awaited, then res would be returned
+            var res  = await Task.Run(() => new List<AccountingBalance>()
             {
                 new AccountingBalance()
                 {
@@ -101,13 +109,96 @@ namespace Bargreen.Services
                      ItemNumber = "fbr77",
                      TotalInventoryValue = 17.99M
                 }
-            };
+            });
+
+            return res;
         }
 
-        public static IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
+        public async static Task<IEnumerable<InventoryReconciliationResult>> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
             //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+            var reconciliationList = new List<InventoryReconciliationResult>();
+            
+            if (inventoryBalances.Any() && accountingBalances.Any())
+            {
+                var accountingList = accountingBalances.ToList();
+                foreach (var inv in inventoryBalances)
+                {
+                    InventoryReconciliationResult reconRes;
+                    //Check to see if there are duplicate inv items
+                    if (reconciliationList.Any(r => r.ItemNumber == inv.ItemNumber.ToUpper()))
+                    {
+                        reconRes = reconciliationList.Find(r => r.ItemNumber == inv.ItemNumber.ToUpper());
+                        reconRes.TotalValueOnHandInInventory += inv.PricePerItem * inv.QuantityOnHand;
+                    }
+                    else
+                    {
+                        reconRes = new InventoryReconciliationResult
+                        {
+                            ItemNumber = inv.ItemNumber.ToUpper(),
+                            TotalValueOnHandInInventory = inv.PricePerItem * inv.QuantityOnHand
+                        };
+                        reconciliationList.Add(reconRes);
+                    }
+
+                    if (accountingList.Any(a => a.ItemNumber.ToUpper() == reconRes.ItemNumber))
+                    {
+                        reconRes.TotalValueInAccountingBalance = accountingList
+                            .Find(a => a.ItemNumber.ToUpper() == reconRes.ItemNumber)
+                            .TotalInventoryValue;
+                    }
+                    else
+                    {
+                        reconRes.TotalValueInAccountingBalance = 0;
+                    }
+
+                    reconRes.InventoryAccountingDifference =
+                        reconRes.TotalValueOnHandInInventory - reconRes.TotalValueInAccountingBalance;
+                }
+            }
+            else if(!accountingBalances.Any())
+            {
+                foreach (var inv in inventoryBalances)
+                {
+                    InventoryReconciliationResult reconRes;
+                    //Check to see if there are duplicate inv items
+                    if (reconciliationList.Any(r => r.ItemNumber == inv.ItemNumber.ToUpper()))
+                    {
+                        reconRes = reconciliationList.Find(r => r.ItemNumber == inv.ItemNumber.ToUpper());
+                        reconRes.TotalValueOnHandInInventory += inv.PricePerItem * inv.QuantityOnHand;
+                    }
+                    else
+                    {
+                        reconRes = new InventoryReconciliationResult
+                        {
+                            ItemNumber = inv.ItemNumber.ToUpper(),
+                            TotalValueOnHandInInventory = inv.PricePerItem * inv.QuantityOnHand
+                        };
+                        reconciliationList.Add(reconRes);
+                    }
+                    reconRes.InventoryAccountingDifference =
+                        reconRes.TotalValueOnHandInInventory - reconRes.TotalValueInAccountingBalance;
+                }
+            }
+
+            if (accountingBalances.Count() != 0)
+            {
+                foreach (var balance in accountingBalances)
+                {
+                    if (reconciliationList.All(a => a.ItemNumber != balance.ItemNumber.ToUpper()))
+                    {
+                        var reconRes = new InventoryReconciliationResult();
+                        reconRes.ItemNumber = balance.ItemNumber.ToUpper();
+                        reconRes.TotalValueOnHandInInventory = 0;
+                        reconRes.TotalValueInAccountingBalance = balance.TotalInventoryValue;
+                        reconRes.InventoryAccountingDifference =
+                            reconRes.TotalValueOnHandInInventory - reconRes.TotalValueInAccountingBalance;
+                        reconciliationList.Add(reconRes);
+                    }
+                }
+            }
+
+            return reconciliationList;
         }
     }
 }
