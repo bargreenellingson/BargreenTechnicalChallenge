@@ -27,4 +27,9 @@ INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
 --TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
-SELECT * FROM ...
+SELECT 
+       ItemNumber,  
+       SUM(QuantityOnHand*PricePerItem) as RealInventoryValue
+FROM  @inventory i 
+left join @accounting a on a.ItemNumber = i.ItemNumber
+HAVING SUM(i.QuantityOnHand*i.PricePerItem) != a.TotalInventoryValue
