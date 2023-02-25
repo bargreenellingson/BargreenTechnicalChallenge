@@ -28,9 +28,13 @@ namespace Bargreen.Services
 
     public class InventoryService : IInventoryService
     {
-        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        private IEnumerable<InventoryBalance> _inventoryBalances = new List<InventoryBalance>();
+        private IEnumerable<AccountingBalance> _accountingBalances = new List<AccountingBalance>();
+
+        // default intitialization of inventory balance if no inventory data is provided
+        public void InitializeInventoryBalance()
         {
-            return new List<InventoryBalance>()
+            _inventoryBalances = new List<InventoryBalance>()
             {
                 new InventoryBalance()
                 {
@@ -77,9 +81,10 @@ namespace Bargreen.Services
             };
         }
 
-        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        // default intitialization of account balance if no accounting data is provided
+        public void InitializeAccountingBalance()
         {
-            return new List<AccountingBalance>()
+            _accountingBalances = new List<AccountingBalance>()
             {
                 new AccountingBalance()
                 {
@@ -104,14 +109,120 @@ namespace Bargreen.Services
             };
         }
 
+        public void InitializeInventoryBalance(List<InventoryBalance> invBalances) 
+        {
+            this._inventoryBalances = invBalances;
+        }
+
+        public void InitializeAccountingBalances(List<AccountingBalance> accBalance)
+        {
+            this._accountingBalances = accBalance;
+        }
+
+        public IEnumerable<InventoryBalance> GetInventoryBalances()
+        {
+            if (_inventoryBalances.Count == 0) 
+            {
+                InitializeInventoryBalance();
+            }
+            return _inventoryBalances;
+        }
+
+        public IEnumerable<AccountingBalance> GetAccountingBalances()
+        {
+            if (_accountingBalances.Count == 0)
+            {
+                InitializeAccountingBalance();
+            }
+            return _accountingBalances;
+        }
+
+        /**
+         * 1: add all values from inventoryBalances into a dictionary where we can map the itemNumber to the totalValue
+         * 2: do the same with accountingBalances into a different dictionary
+         * 3. if for any 2 items there is a mismatch, create an InventoryReconciliationResult and add it into the result
+         * 
+         * **/
         public IEnumerable<InventoryReconciliationResult> ReconcileInventoryToAccounting(IEnumerable<InventoryBalance> inventoryBalances, IEnumerable<AccountingBalance> accountingBalances)
         {
-            return new List<InventoryReconciliationResult>()
-            {
+            Dictionary<string, decimal> inventoryValues = new Dictionary<string, decimal>();
+            Dictionary<string, decimal> accountingValues = new Dictionary<string, decimal>();
+            List<InventoryReconciliationResult> result = new List<InventoryReconciliationResult>();
 
-            };
-            //TODO-CHALLENGE: Compare inventory balances to accounting balances and find differences
-            throw new NotImplementedException();
+            // fill inventoryValues
+            foreach(InventoryBalance item in inventoryBalances)
+            {
+                var itemNumber = item.ItemNumber;
+                var pricePerItem = item.PricePerItem;
+                var quantity = item.QuantityOnHand;
+                var totalItemVal = pricePerItem * quantity;
+                if(!inventoryValues.ContainsKey(itemNumber))
+                {
+                    inventoryValues.Add(itemNumber, totalItemVal);
+                }
+                else
+                {
+                    inventoryValues[itemNumber] += totalItemVal;
+                }
+            }
+
+            // fill accountingValues
+            foreach (AccountingBalance item in accountingBalances)
+            {
+                var itemNumber = item.ItemNumber;
+                var totalInvValue = item.TotalInventoryValue;
+                accountingValues.Add(itemNumber, totalInvValue);
+            }
+
+            // compare every value in inventory with every value in account
+            foreach(KeyValuePair<string, decimal> item in inventoryValues) 
+            {
+                string itemNumber = item.Key;
+                decimal val = item.Value;
+
+                if (!accountingValues.ContainsKey(itemNumber))
+                {
+                    InventoryReconciliationResult reconsiliationItem = new InventoryReconciliationResult();
+                    reconsiliationItem.ItemNumber = itemNumber;
+                    reconsiliationItem.TotalValueOnHandInInventory = val;
+                    reconsiliationItem.TotalValueInAccountingBalance = 0;
+                    result.Add(reconsiliationItem);
+                }
+                else if(accountingValues[itemNumber] != val)
+                {
+                    InventoryReconciliationResult reconsiliationItem = new InventoryReconciliationResult();
+                    reconsiliationItem.ItemNumber = itemNumber;
+                    reconsiliationItem.TotalValueOnHandInInventory = val;
+                    reconsiliationItem.TotalValueInAccountingBalance = accountingValues[itemNumber];
+                    result.Add(reconsiliationItem);
+                }
+            }
+
+            // compare every value in account with every value in inventory
+            foreach (KeyValuePair<string, decimal> item in accountingValues)
+            {
+                string itemNumber = item.Key;
+                decimal val = item.Value;
+
+                if (!inventoryValues.ContainsKey(itemNumber))
+                {
+                    InventoryReconciliationResult reconsiliationItem = new InventoryReconciliationResult();
+                    reconsiliationItem.ItemNumber = itemNumber;
+                    reconsiliationItem.TotalValueOnHandInInventory = 0;
+                    reconsiliationItem.TotalValueInAccountingBalance = val;
+                    result.Add(reconsiliationItem);
+                }
+                else if (inventoryValues[itemNumber] != val)
+                {
+                    InventoryReconciliationResult reconsiliationItem = new InventoryReconciliationResult();
+                    reconsiliationItem.ItemNumber = itemNumber;
+                    reconsiliationItem.TotalValueOnHandInInventory = inventoryValues[itemNumber];
+                    reconsiliationItem.TotalValueInAccountingBalance = val;
+                    result.Add(reconsiliationItem);
+                }
+            }
+
+            return result;
         }
     }
 }
