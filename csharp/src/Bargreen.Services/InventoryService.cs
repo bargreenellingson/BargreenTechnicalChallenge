@@ -1,14 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Bargreen.Services
 {
+    class InventoryComparer : IEqualityComparer<InventoryReconciliationResult>
+    {
+        public bool Equals(InventoryReconciliationResult a, InventoryReconciliationResult b)
+        {
+            if (a == null && b == null) { return true; }
+            if (a == null | b == null) { return false; }
+            if (a.ItemNumber == b.ItemNumber && a.TotalValueInAccountingBalance == b.TotalValueInAccountingBalance && a.TotalValueOnHandInInventory == b.TotalValueOnHandInInventory) { return true; }
+            return false;
+        }
+        public int GetHashCode(InventoryReconciliationResult i)
+        {
+            string code = i.ItemNumber + "," + i.TotalValueInAccountingBalance + "," + i.TotalValueOnHandInInventory;
+            return code.GetHashCode();
+        }
+    }
+
     public class InventoryReconciliationResult
     {
         public string ItemNumber { get; set; }
         public decimal TotalValueOnHandInInventory { get; set; }
         public decimal TotalValueInAccountingBalance { get; set; }
+
+        public Boolean equals(InventoryReconciliationResult b) {
+            if (this.ItemNumber == b.ItemNumber && this.TotalValueInAccountingBalance == b.TotalValueInAccountingBalance && this.TotalValueOnHandInInventory == b.TotalValueOnHandInInventory)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 
     public class InventoryBalance
@@ -30,6 +55,27 @@ namespace Bargreen.Services
     {
         private IEnumerable<InventoryBalance> _inventoryBalances = new List<InventoryBalance>();
         private IEnumerable<AccountingBalance> _accountingBalances = new List<AccountingBalance>();
+
+        public InventoryService()
+        {
+            InitializeInventoryBalance();
+            InitializeAccountingBalance();
+        }
+        public InventoryService(List<InventoryBalance> invBalances)
+        {
+            InitializeInventoryBalance(invBalances);
+            InitializeAccountingBalance(new List<AccountingBalance>());
+        }
+        public InventoryService(List<AccountingBalance> accBalance)
+        {
+            InitializeInventoryBalance(new List<InventoryBalance>());
+            InitializeAccountingBalance(accBalance);
+        }
+        public InventoryService(List<InventoryBalance> invBalances, List<AccountingBalance> accBalance)
+        {
+            InitializeInventoryBalance(invBalances);
+            InitializeAccountingBalance(accBalance);
+        }
 
         // default intitialization of inventory balance if no inventory data is provided
         public void InitializeInventoryBalance()
@@ -114,26 +160,18 @@ namespace Bargreen.Services
             this._inventoryBalances = invBalances;
         }
 
-        public void InitializeAccountingBalances(List<AccountingBalance> accBalance)
+        public void InitializeAccountingBalance(List<AccountingBalance> accBalance)
         {
             this._accountingBalances = accBalance;
         }
 
         public IEnumerable<InventoryBalance> GetInventoryBalances()
         {
-            if (_inventoryBalances.Count == 0) 
-            {
-                InitializeInventoryBalance();
-            }
             return _inventoryBalances;
         }
 
         public IEnumerable<AccountingBalance> GetAccountingBalances()
         {
-            if (_accountingBalances.Count == 0)
-            {
-                InitializeAccountingBalance();
-            }
             return _accountingBalances;
         }
 
@@ -147,7 +185,7 @@ namespace Bargreen.Services
         {
             Dictionary<string, decimal> inventoryValues = new Dictionary<string, decimal>();
             Dictionary<string, decimal> accountingValues = new Dictionary<string, decimal>();
-            List<InventoryReconciliationResult> result = new List<InventoryReconciliationResult>();
+            HashSet<InventoryReconciliationResult> result = new HashSet<InventoryReconciliationResult>(new InventoryComparer());
 
             // fill inventoryValues
             foreach(InventoryBalance item in inventoryBalances)
