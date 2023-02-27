@@ -30,12 +30,13 @@ INSERT INTO @accounting VALUES ('fbr77', 17.99)
 /**
 1. Simplify Inventory table to add values that are in multiple warehouses. Format it to look like the accounting table
     a. take all values in the table, merge them appropriately, then add them into a new table
-
-    I was not able to write and test my query because on my machine I was not able to set up a sql database.
+    I was not able to write and test my query because on my machine I was not able to set up and run a sql db. The following has not been thoroughly tested and Is not guaranteed to work.
 **/
 SELECT 
-    ItemNumber,
-    QuantityOnHand,
-    PricePerItem
-INTO simplifiedinventory
-FROM inventory;
+    inventory.ItemNumber,
+    SUM(inventory.QuantityOnHand *
+    inventory.PricePerItem) as ItemVal
+FROM @inventory inventory
+LEFT JOIN @accounting accounting on accounting.ItemNumber = inventory.ItemNumber
+group by inventory.ItemNumber, accounting.TotalInventoryValue
+HAVING SUM(inventory.QuantityOnHand * inventory.PricePerItem) != accounting.TotalInventoryValue;
