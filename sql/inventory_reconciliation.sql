@@ -27,4 +27,15 @@ INSERT INTO @accounting VALUES ('xxccM', 7602.75)
 INSERT INTO @accounting VALUES ('fbr77', 17.99)
 
 --TODO-CHALLENGE: Write a query to reconcile matches/differences between the inventory and accounting tables
-SELECT * FROM ...
+/**
+1. Simplify Inventory table to add values that are in multiple warehouses. Format it to look like the accounting table
+    a. take all values in the table, merge them appropriately, then add them into a new table
+
+    I was not able to write and test my query because on my machine I was not able to set up a sql database.
+**/
+SELECT 
+    ItemNumber,
+    QuantityOnHand,
+    PricePerItem
+INTO simplifiedinventory
+FROM inventory;
